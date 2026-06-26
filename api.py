@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -25,6 +25,7 @@ from ude_platform.api_security import (
     ApiKeyMiddleware,
     RateLimitMiddleware,
     governance_quotas_doc,
+    get_usage_stats,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -213,11 +214,27 @@ async def platform_freshness():
 
 @app.get("/platform/governance")
 async def platform_governance():
-    """Quotas API et gouvernance d'accès (complète /bdd/relationnelle)."""
+    """Quotas API et gouvernance d'acces (complete /bdd/relationnelle)."""
     out = governance_quotas_doc()
     out["bdd_relationnelle"] = "/bdd/relationnelle"
     out["bdd_non_relationnelle"] = "/bdd/non-relationnelle"
     return out
+
+
+@app.get("/platform/quota-usage")
+async def platform_quota_usage(request: Request):
+    """
+    Statistiques d'utilisation des quotas API.
+    Affiche les requetes effectuees et les blocages par IP.
+    """
+    from ude_platform.api_security import _client_ip
+    ip = _client_ip(request)
+    return {
+        "your_ip": ip,
+        "your_usage": get_usage_stats(ip),
+        "global_stats": get_usage_stats(),
+        "limits": governance_quotas_doc()["rate_limit"],
+    }
 
 
 @app.get("/platform/metrics")
