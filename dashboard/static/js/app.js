@@ -163,6 +163,8 @@ function updateLoadingText(text) {
 const MAP_BASE = ['#0c2d48', '#0e5a7a', '#0e94b8', '#38d9f5', '#a8ecff'];
 const AIR_GOOD_TO_BAD = ['#34d399', '#a3e635', '#fbbf24', '#f97316', '#ef4444'];
 const VEG_NONE_TO_DENSE = ['#64748b', '#94a3b8', '#86efac', '#22c55e', '#14532d'];
+// Sante: vert = bon acces, rouge = mauvais
+const SANTE_COLORS = ['#ef4444', '#f97316', '#fbbf24', '#a3e635', '#34d399'];
 
 function seqLtExpr(t1, t2, t3, t4) {
     return [
@@ -1468,6 +1470,46 @@ function getColorExpressionForIndicator(indicator) {
                 ['<', ['get', 'value'], 80], AIR_GOOD_TO_BAD[1],
                 AIR_GOOD_TO_BAD[0],
             ];
+        case 'sante_proximite':
+            // Score 0-100, vert = bon acces sante
+            return [
+                'case',
+                ['<', ['get', 'value'], 40], SANTE_COLORS[0],
+                ['<', ['get', 'value'], 55], SANTE_COLORS[1],
+                ['<', ['get', 'value'], 70], SANTE_COLORS[2],
+                ['<', ['get', 'value'], 85], SANTE_COLORS[3],
+                SANTE_COLORS[4],
+            ];
+        case 'pharmacies':
+            // Nombre de pharmacies, vert = beaucoup
+            return [
+                'case',
+                ['<', ['get', 'value'], 30], SANTE_COLORS[0],
+                ['<', ['get', 'value'], 50], SANTE_COLORS[1],
+                ['<', ['get', 'value'], 70], SANTE_COLORS[2],
+                ['<', ['get', 'value'], 90], SANTE_COLORS[3],
+                SANTE_COLORS[4],
+            ];
+        case 'defibrillateurs':
+            // Densite DAE pour 10k hab, vert = dense
+            return [
+                'case',
+                ['<', ['get', 'value'], 2], SANTE_COLORS[0],
+                ['<', ['get', 'value'], 3], SANTE_COLORS[1],
+                ['<', ['get', 'value'], 4], SANTE_COLORS[2],
+                ['<', ['get', 'value'], 5], SANTE_COLORS[3],
+                SANTE_COLORS[4],
+            ];
+        case 'urgences':
+            // Temps vers urgences (min), vert = rapide (inverse)
+            return [
+                'case',
+                ['>', ['get', 'value'], 9], SANTE_COLORS[0],
+                ['>', ['get', 'value'], 7], SANTE_COLORS[1],
+                ['>', ['get', 'value'], 6], SANTE_COLORS[2],
+                ['>', ['get', 'value'], 5], SANTE_COLORS[3],
+                SANTE_COLORS[4],
+            ];
         default:
             return seqLtExpr(8000, 10000, 12000, 15000);
     }
@@ -1532,6 +1574,30 @@ function getColorForIndicator(indicator, value) {
             if (value < 65) return AIR_GOOD_TO_BAD[2];
             if (value < 80) return AIR_GOOD_TO_BAD[1];
             return AIR_GOOD_TO_BAD[0];
+        case 'sante_proximite':
+            if (value < 40) return SANTE_COLORS[0];
+            if (value < 55) return SANTE_COLORS[1];
+            if (value < 70) return SANTE_COLORS[2];
+            if (value < 85) return SANTE_COLORS[3];
+            return SANTE_COLORS[4];
+        case 'pharmacies':
+            if (value < 30) return SANTE_COLORS[0];
+            if (value < 50) return SANTE_COLORS[1];
+            if (value < 70) return SANTE_COLORS[2];
+            if (value < 90) return SANTE_COLORS[3];
+            return SANTE_COLORS[4];
+        case 'defibrillateurs':
+            if (value < 2) return SANTE_COLORS[0];
+            if (value < 3) return SANTE_COLORS[1];
+            if (value < 4) return SANTE_COLORS[2];
+            if (value < 5) return SANTE_COLORS[3];
+            return SANTE_COLORS[4];
+        case 'urgences':
+            if (value > 9) return SANTE_COLORS[0];
+            if (value > 7) return SANTE_COLORS[1];
+            if (value > 6) return SANTE_COLORS[2];
+            if (value > 5) return SANTE_COLORS[3];
+            return SANTE_COLORS[4];
         default:
             return MAP_BASE[2];
     }
@@ -2618,10 +2684,18 @@ function updateMapLegend() {
         revenus: { title: 'Revenu médian (€)', labels: ['25k', '40k'] },
         densite: { title: 'Densité (hab./km²)', labels: ['12k', '32k'] },
         vegetation: { title: 'Végétation', labels: ['Peu / aucun', 'Dense'] },
-        transports: { title: 'Points de transport', labels: ['5', '50'] }
+        transports: { title: 'Points de transport', labels: ['5', '50'] },
+        score_global: { title: 'Score Global (/100)', labels: ['Faible', 'Excellent'] },
+        potentiel: { title: 'Potentiel Plus-Value (/100)', labels: ['Faible', 'Fort'] },
+        sante_proximite: { title: 'Santé Proximité (/100)', labels: ['Faible', 'Excellent'] },
+        pharmacies: { title: 'Pharmacies (nombre)', labels: ['< 30', '> 90'] },
+        defibrillateurs: { title: 'DAE (/10k hab.)', labels: ['< 2', '> 5'] },
+        urgences: { title: 'Accès urgences (min)', labels: ['Rapide', 'Lent'] }
     };
     const cfg = configs[selectedIndicator] || configs.prix;
     const baseGrad = 'linear-gradient(to right, #0c2d48, #0e5a7a, #0e94b8, #38d9f5, #a8ecff)';
+    const santeGrad = 'linear-gradient(to right, #ef4444, #f97316, #fbbf24, #a3e635, #34d399)';
+    const scoreGrad = 'linear-gradient(to right, #ef4444, #f97316, #fbbf24, #a3e635, #34d399)';
     const gradients = {
         prix: baseGrad,
         logements: baseGrad,
@@ -2634,6 +2708,12 @@ function updateMapLegend() {
         transports: baseGrad,
         pollution: 'linear-gradient(to right, #34d399, #a3e635, #fbbf24, #f97316, #ef4444)',
         vegetation: 'linear-gradient(to right, #64748b, #94a3b8, #86efac, #22c55e, #14532d)',
+        score_global: scoreGrad,
+        potentiel: scoreGrad,
+        sante_proximite: santeGrad,
+        pharmacies: santeGrad,
+        defibrillateurs: santeGrad,
+        urgences: 'linear-gradient(to right, #34d399, #a3e635, #fbbf24, #f97316, #ef4444)',
     };
     legend.innerHTML = `
         <h4>${cfg.title}</h4>
