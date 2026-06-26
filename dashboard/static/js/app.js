@@ -1375,6 +1375,12 @@ const INDICATOR_FORMULAS = {
         unit: 'score 0–100',
         note: 'Estimation du potentiel de valorisation future basée sur : accessibilité prix, dynamique récente, desserte transports, cadre de vie, mixité sociale et sécurité.',
     },
+    sante_proximite: {
+        title: 'Score Santé de Proximité',
+        formula: 'Σ (ratio_equip × pondération)',
+        unit: 'score 0–100',
+        note: 'Score pondéré : pharmacies (20%), médecins (20%), urgences (20%), dentistes (15%), DAE (10%), centres santé (10%), hôpitaux (5%). Ratios pour 10 000 habitants.',
+    },
 };
 
 function selectIndicator(indicator) {
@@ -1563,9 +1569,46 @@ function getIndicatorValue(arr, indicator, year) {
             return calculateGlobalScore(arr);
         case 'potentiel':
             return calculatePotentielPlusValue(arr).score;
+        case 'sante_proximite':
+            return getSanteProximiteScore(arr.arrondissement);
+        case 'pharmacies':
+            return getPharmaciesCount(arr.arrondissement);
+        case 'defibrillateurs':
+            return getDefibrillateursDensite(arr.arrondissement);
+        case 'urgences':
+            return getUrgencesProximite(arr.arrondissement);
         default:
             return arr.statistiques?.prix_m2_actuel || 0;
     }
+}
+
+// Fonctions pour les indicateurs de sante
+function getSanteProximiteScore(arrNum) {
+    if (typeof SANTE_DATA === 'undefined') return 0;
+    const data = SANTE_DATA.sante_by_arrondissement[String(arrNum)];
+    if (!data) return 0;
+    const result = calculateScoreSanteProximite(data);
+    return result ? result.score : 0;
+}
+
+function getPharmaciesCount(arrNum) {
+    if (typeof SANTE_DATA === 'undefined') return 0;
+    const data = SANTE_DATA.sante_by_arrondissement[String(arrNum)];
+    return data ? data.pharmacies : 0;
+}
+
+function getDefibrillateursDensite(arrNum) {
+    if (typeof SANTE_DATA === 'undefined') return 0;
+    const data = SANTE_DATA.sante_by_arrondissement[String(arrNum)];
+    if (!data) return 0;
+    // Densite pour 10 000 habitants
+    return ((data.defibrillateurs / data.population) * 10000).toFixed(1);
+}
+
+function getUrgencesProximite(arrNum) {
+    if (typeof SANTE_DATA === 'undefined') return 0;
+    const data = SANTE_DATA.sante_by_arrondissement[String(arrNum)];
+    return data ? data.urgences_proximite : 0;
 }
 
 // Afficher le tooltip
@@ -2154,6 +2197,106 @@ function updateTransportsChart() {
     }
 }
 
+// Graphique sante de proximite
+function updateSanteChart() {
+    const chartElement = document.getElementById('sante-chart');
+    if (!chartElement) {
+        return;
+    }
+
+    const ctx = chartElement.getContext('2d');
+
+    if (charts.sante) {
+        charts.sante.destroy();
+    }
+
+    if (typeof SANTE_DATA === 'undefined' || !allData || allData.length === 0) {
+        return;
+    }
+
+    const arr = selectedArr ? allData.find(a => a.arrondissement === selectedArr) : allData[0];
+    if (!arr) {
+        return;
+    }
+
+    const santeData = SANTE_DATA.sante_by_arrondissement[String(arr.arrondissement)];
+    if (!santeData) {
+        return;
+    }
+
+    const scoreResult = calculateScoreSanteProximite(santeData);
+    if (!scoreResult) {
+        return;
+    }
+
+    try {
+        charts.sante = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['Pharmacies', 'Dentistes', 'Medecins', 'DAE', 'Urgences', 'Centres', 'Hopitaux'],
+                datasets: [{
+                    label: arr.arrondissement + 'e arr.',
+                    data: [
+                        scoreResult.details.pharmacies,
+                        scoreResult.details.dentistes,
+                        scoreResult.details.medecins,
+                        scoreResult.details.defibrillateurs,
+                        scoreResult.details.urgences,
+                        scoreResult.details.centres,
+                        scoreResult.details.hopitaux
+                    ],
+                    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                    borderColor: '#10B981',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#10B981'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: CHART_THEME.text,
+                            padding: 12,
+                            font: { size: 11 }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: `Score global: ${scoreResult.score}/100`,
+                        color: CHART_THEME.text,
+                        font: { size: 14, weight: 'bold' }
+                    }
+                },
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            stepSize: 20,
+                            color: CHART_THEME.text
+                        },
+                        pointLabels: {
+                            color: CHART_THEME.text,
+                            font: { size: 10 }
+                        },
+                        grid: {
+                            color: CHART_THEME.grid
+                        },
+                        angleLines: {
+                            color: CHART_THEME.grid
+                        }
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Erreur lors de la creation du graphique sante:', error);
+    }
+}
+
 function updateCharts() {
     updateTimelineChart();
     updateComparisonChart();
@@ -2161,6 +2304,7 @@ function updateCharts() {
     updateTransportsChart();
     updateLogementsSociauxChart();
     updateAccessibiliteChart();
+    updateSanteChart();
 }
 
 async function loadGeoPointsLayer(arrondissement = null) {
@@ -2561,7 +2705,11 @@ function getIndicatorName(indicator) {
         'vegetation': 'Végétation',
         'transports': 'Transports',
         'score_global': 'Score Global',
-        'potentiel': 'Potentiel Plus-Value'
+        'potentiel': 'Potentiel Plus-Value',
+        'sante_proximite': 'Santé Proximité',
+        'pharmacies': 'Pharmacies',
+        'defibrillateurs': 'Défibrillateurs',
+        'urgences': 'Accès Urgences'
     };
     return names[indicator] || indicator;
 }
@@ -2594,6 +2742,14 @@ function getIndicatorLabel(indicator, value) {
             return value + '/100';
         case 'potentiel':
             return value + '/100';
+        case 'sante_proximite':
+            return value + '/100';
+        case 'pharmacies':
+            return value + ' pharmacies';
+        case 'defibrillateurs':
+            return value + ' DAE/10k hab.';
+        case 'urgences':
+            return value + ' min vers urgences';
         default:
             return value;
     }

@@ -123,6 +123,21 @@
                             <span class="indicator-name">Transports</span>
                         </div>
 
+                        <div class="indicator-category">Sante</div>
+                        <div class="indicator-item indicator-item--formula" data-indicator="sante_proximite" role="option" tabindex="0" aria-pressed="false">
+                            <span class="indicator-name">Sante Proximite</span>
+                            <span class="indicator-badge">formule</span>
+                        </div>
+                        <div class="indicator-item" data-indicator="pharmacies" role="option" tabindex="0" aria-pressed="false">
+                            <span class="indicator-name">Pharmacies</span>
+                        </div>
+                        <div class="indicator-item" data-indicator="defibrillateurs" role="option" tabindex="0" aria-pressed="false">
+                            <span class="indicator-name">Defibrillateurs</span>
+                        </div>
+                        <div class="indicator-item" data-indicator="urgences" role="option" tabindex="0" aria-pressed="false">
+                            <span class="indicator-name">Acces Urgences</span>
+                        </div>
+
                         <div class="indicator-category">Scores</div>
                         <div class="indicator-item indicator-item--formula" data-indicator="score_global" role="option" tabindex="0" aria-pressed="false">
                             <span class="indicator-name">Score Global</span>
@@ -211,6 +226,10 @@
                     <h3 class="chart-title">Transports publics</h3>
                     <canvas id="transports-chart"></canvas>
                 </article>
+                <article class="chart-card">
+                    <h3 class="chart-title">Sante de proximite</h3>
+                    <canvas id="sante-chart"></canvas>
+                </article>
             </div>
         </section>
 
@@ -221,6 +240,7 @@
     <script src="static/js/paris_detailed_polygons.js"></script>
     <script src="static/js/paris_official_polygons.js"></script>
     <script src="static/js/transports_data.js"></script>
-    <script src="static/js/app.js?v=20260626a"></script>
+    <script src="static/js/sante_data.js"></script>
+    <script src="static/js/app.js?v=20260626b"></script>
 </body>
 </html>
