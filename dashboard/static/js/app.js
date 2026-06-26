@@ -1301,7 +1301,7 @@ function getColorExpressionForIndicator(indicator) {
         case 'loyers':
             return seqGteExpr(22, 28, 32, 36);
         case 'accessibilite':
-            return seqGteExpr(200, 300, 350, 400);
+            return seqGteExpr(170, 185, 200, 215);
         case 'tension':
             return seqGteExpr(40, 45, 50, 55);
         case 'densite':
@@ -1359,7 +1359,7 @@ function getColorForIndicator(indicator, value) {
         case 'loyers':
             return baseColorAt(value, 22, 28, 32, 36, true);
         case 'accessibilite':
-            return baseColorAt(value, 200, 300, 350, 400, true);
+            return baseColorAt(value, 170, 185, 200, 215, true);
         case 'tension':
             return baseColorAt(value, 40, 45, 50, 55, true);
         case 'densite':
@@ -1532,40 +1532,49 @@ function formatAccessibiliteBlock(arr) {
 
 function updateSelectedInfo(arr) {
     const infoDiv = document.getElementById('selected-info');
+    const prix = arr.statistiques?.prix_m2_actuel;
+    const variation = arr.evolution_calculee?.variation_pourcentage;
+    const logSoc = arr.logements_sociaux_pourcentage;
+    const qualAir = arr.pollution_qualite_air?.qualite;
+    const delits = arr.delits_enregistres?.delits_par_1000_habitants;
+    const revenu = arr.revenus_moyens?.revenu_median_menage;
+    const densite = arr.densite_population?.densite_km2;
+    const access = arr.accessibilite_logement?.mois_revenu_pour_50m2_achat;
+
     infoDiv.innerHTML = `
         <div class="info-content">
-            <div class="info-title">${arr.arrondissement}e Arrondissement</div>
+            <div class="info-title">${arr.arrondissement}<sup>e</sup> Arrondissement</div>
             <div class="info-item">
-                <span class="info-label">Prix/m² actuel</span>
-                <span class="info-value">${arr.statistiques?.prix_m2_actuel?.toLocaleString('fr-FR')}€</span>
+                <span class="info-label">Prix/m2</span>
+                <span class="info-value">${prix ? prix.toLocaleString('fr-FR') + ' €' : 'N/A'}</span>
             </div>
             <div class="info-item">
                 <span class="info-label">Variation</span>
-                <span class="info-value">${arr.evolution_calculee?.variation_pourcentage?.toFixed(2) || 0}%</span>
+                <span class="info-value ${variation > 0 ? 'text-success' : variation < 0 ? 'text-danger' : ''}">${variation != null ? (variation > 0 ? '+' : '') + variation.toFixed(1) + '%' : 'N/A'}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Accessibilite</span>
+                <span class="info-value">${access ? access.toFixed(0) + ' mois' : 'N/A'}</span>
             </div>
             <div class="info-item">
                 <span class="info-label">Logements sociaux</span>
-                <span class="info-value">${arr.logements_sociaux_pourcentage}%</span>
+                <span class="info-value">${logSoc != null ? logSoc + '%' : 'N/A'}</span>
             </div>
             <div class="info-item">
-                <span class="info-label">Qualité air</span>
-                <span class="info-value">${arr.pollution_qualite_air?.qualite || 'N/A'}</span>
+                <span class="info-label">Qualite air</span>
+                <span class="info-value">${qualAir || 'N/A'}</span>
             </div>
             <div class="info-item">
-                <span class="info-label">Délits / 1000 hab.</span>
-                <span class="info-value">${arr.delits_enregistres?.delits_par_1000_habitants != null ? arr.delits_enregistres.delits_par_1000_habitants.toFixed(1) : 'N/A'}</span>
+                <span class="info-label">Securite</span>
+                <span class="info-value">${delits != null ? delits.toFixed(0) + ' delits/1000 hab.' : 'N/A'}</span>
             </div>
             <div class="info-item">
-                <span class="info-label">Total délits (${arr.delits_enregistres?.annee || '—'})</span>
-                <span class="info-value">${arr.delits_enregistres?.total_delits != null ? arr.delits_enregistres.total_delits.toLocaleString('fr-FR') : 'N/A'}</span>
+                <span class="info-label">Revenu median</span>
+                <span class="info-value">${revenu ? revenu.toLocaleString('fr-FR') + ' €' : 'N/A'}</span>
             </div>
             <div class="info-item">
-                <span class="info-label">Revenu médian</span>
-                <span class="info-value">${arr.revenus_moyens?.revenu_median_menage?.toLocaleString('fr-FR') || 'N/A'}€</span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Densité</span>
-                <span class="info-value">${arr.densite_population?.densite_km2 != null ? arr.densite_population.densite_km2.toLocaleString('fr-FR') + ' hab./km²' : 'N/A'}</span>
+                <span class="info-label">Densite</span>
+                <span class="info-value">${densite ? densite.toLocaleString('fr-FR') + ' hab./km2' : 'N/A'}</span>
             </div>
             ${formatAccessibiliteBlock(arr)}
             ${getTransportsInfoHTML(arr)}
@@ -2282,7 +2291,7 @@ function updateMapLegend() {
         prix: { title: 'Prix/m² (€)', labels: ['8000', '15000'] },
         logements: { title: 'Logements sociaux (%)', labels: ['10', '28'] },
         loyers: { title: 'Loyer estimé €/m²/mois', labels: ['22', '38'] },
-        accessibilite: { title: 'Mois revenu pour 50 m²', labels: ['< 200', '> 400'] },
+        accessibilite: { title: 'Mois revenu pour 50 m2', labels: ['< 170', '> 215'] },
         tension: { title: 'Tension locative (%)', labels: ['40 %', '55 %'] },
         pollution: { title: 'Qualité air (proxy)', labels: ['Meilleure', 'Moins bonne'] },
         delits: { title: 'Délinquance', labels: ['Faible', 'Élevée'] },
